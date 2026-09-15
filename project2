@@ -1,0 +1,157 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+
+# Function to create translation matrix
+def translation_matrix(tx, ty):
+    return np.array([
+        [1, 0, tx],
+        [0, 1, ty],
+        [0, 0, 1]
+    ], dtype=float)
+
+
+# Function to create rotation matrix
+def rotation_matrix(angle):
+    theta = math.radians(angle)
+
+    return np.array([
+        [math.cos(theta), -math.sin(theta), 0],
+        [math.sin(theta),  math.cos(theta), 0],
+        [0, 0, 1]
+    ], dtype=float)
+
+
+# Function to create scaling matrix
+def scaling_matrix(sx, sy):
+    return np.array([
+        [sx, 0, 0],
+        [0, sy, 0],
+        [0, 0, 1]
+    ], dtype=float)
+
+
+# Function to create shearing matrix
+def shearing_matrix(shx, shy):
+    return np.array([
+        [1, shx, 0],
+        [shy, 1, 0],
+        [0, 0, 1]
+    ], dtype=float)
+
+
+# Apply transformation to image
+def apply_transformation(image, matrix):
+    affine = matrix[:2, :]
+    h, w = image.shape[:2]
+
+    return cv2.warpAffine(image, affine, (w, h))
+
+
+# Read input image
+image = cv2.imread("graph.jpg")
+
+if image is None:
+    print("Image not found!")
+    exit()
+
+
+# Get parameters from user
+tx = float(input("Enter translation in X direction: "))
+ty = float(input("Enter translation in Y direction: "))
+
+angle = float(input("Enter rotation angle: "))
+
+sx = float(input("Enter X scaling factor: "))
+sy = float(input("Enter Y scaling factor: "))
+
+shx = float(input("Enter horizontal shear: "))
+shy = float(input("Enter vertical shear: "))
+
+
+# Create transformation matrices
+T = translation_matrix(tx, ty)
+R = rotation_matrix(angle)
+S = scaling_matrix(sx, sy)
+H = shearing_matrix(shx, shy)
+
+
+# Create individual augmented images
+translated = apply_transformation(image, T)
+rotated = apply_transformation(image, R)
+scaled = apply_transformation(image, S)
+sheared = apply_transformation(image, H)
+
+
+# Combined transformations
+RS = R @ S
+TRS = T @ R @ S
+TRSH = T @ R @ S @ H
+
+combined1 = apply_transformation(image, RS)
+combined2 = apply_transformation(image, TRS)
+combined3 = apply_transformation(image, TRSH)
+
+
+# Save images
+cv2.imwrite("translated.jpg", translated)
+cv2.imwrite("rotated.jpg", rotated)
+cv2.imwrite("scaled.jpg", scaled)
+cv2.imwrite("sheared.jpg", sheared)
+cv2.imwrite("rotation_scaling.jpg", combined1)
+cv2.imwrite("translation_rotation_scaling.jpg", combined2)
+cv2.imwrite("all_transformations.jpg", combined3)
+
+
+# Display matrices
+np.set_printoptions(precision=3, suppress=True)
+
+print("\nTranslation Matrix:\n", T)
+print("\nRotation Matrix:\n", R)
+print("\nScaling Matrix:\n", S)
+print("\nShearing Matrix:\n", H)
+print("\nRotation + Scaling Matrix:\n", RS)
+print("\nTranslation + Rotation + Scaling Matrix:\n", TRS)
+print("\nAll Transformations Matrix:\n", TRSH)
+
+
+# Convert BGR to RGB
+images = [
+    image,
+    translated,
+    rotated,
+    scaled,
+    sheared,
+    combined1,
+    combined2,
+    combined3
+]
+
+titles = [
+    "Original",
+    "Translated",
+    "Rotated",
+    "Scaled",
+    "Sheared",
+    "Rotation + Scaling",
+    "Translation + Rotation + Scaling",
+    "All Transformations"
+]
+
+
+# Display images
+plt.figure(figsize=(14, 10))
+
+for i in range(len(images)):
+    plt.subplot(2, 4, i + 1)
+
+    rgb = cv2.cvtColor(images[i], cv2.COLOR_BGR2RGB)
+
+    plt.imshow(rgb)
+    plt.title(titles[i])
+    plt.axis("off")
+
+plt.tight_layout()
+plt.show()
